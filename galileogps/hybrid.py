@@ -38,28 +38,47 @@ def classify_fix_type(counts: Counter, hdop: Optional[float]) -> str:
     gps = counts.get(Constellation.GPS, 0)
     glo = counts.get(Constellation.GLONASS, 0)
     gal = counts.get(Constellation.GALILEO, 0)
-    systems = sum(1 for n in (gps, glo, gal) if n >= 1)
-    total = gps + glo + gal
+    bds = counts.get(Constellation.BEIDOU, 0)
+    present = [name for name, n in (("gps", gps), ("glonass", glo), ("galileo", gal), ("beidou", bds)) if n >= 1]
+    strong = [name for name, n in (("gps", gps), ("glonass", glo), ("galileo", gal), ("beidou", bds)) if n >= MIN_SATS_SINGLE]
+    total = gps + glo + gal + bds
 
     if hdop is not None and hdop > MAX_HDOP:
         return "degraded"
-    if gps >= MIN_SATS_SINGLE and glo >= MIN_SATS_SINGLE:
-        return "gps-glo" if gal < 4 else "hybrid"
-    if systems >= 2 and total >= MIN_SATS_HYBRID:
-        if gal and gps and glo:
-            return "hybrid"
+    if len(strong) >= 3 or (len(present) >= 3 and total >= MIN_SATS_HYBRID):
+        return "hybrid"
+    if len(strong) == 2:
+        pair = tuple(sorted(strong))
+        return {
+            ("glonass", "gps"): "gps-glo",
+            ("galileo", "gps"): "gps-galileo",
+            ("beidou", "gps"): "gps-bds",
+            ("galileo", "glonass"): "glo-galileo",
+            ("beidou", "glonass"): "glo-bds",
+            ("beidou", "galileo"): "gal-bds",
+        }.get(pair, "hybrid")
+    if len(present) >= 2 and total >= MIN_SATS_HYBRID:
+        if bds and gps:
+            return "gps-bds"
+        if bds and gal:
+            return "gal-bds"
+        if bds and glo:
+            return "glo-bds"
         if gps and glo:
             return "gps-glo"
         if gps and gal:
             return "gps-galileo"
         if glo and gal:
             return "glo-galileo"
+        return "hybrid"
     if gps >= MIN_SATS_SINGLE:
         return "gps"
     if glo >= MIN_SATS_SINGLE:
         return "glonass"
     if gal >= MIN_SATS_SINGLE:
         return "galileo"
+    if bds >= MIN_SATS_SINGLE:
+        return "beidou"
     return "none"
 
 
@@ -80,6 +99,8 @@ def build_fix(snap: NmeaSnapshot, node_id: str = "hannover-01") -> dict[str, Any
         "gps_sats": int(counts.get(Constellation.GPS, 0)),
         "glonass_sats": int(counts.get(Constellation.GLONASS, 0)),
         "galileo_sats": int(counts.get(Constellation.GALILEO, 0)),
+        "beidou_sats": int(counts.get(Constellation.BEIDOU, 0)),
         "isb_gps_glo_m": None,
+        "isb_gps_bds_m": None,
         "source_talker": best.talker if best else None,
     }
