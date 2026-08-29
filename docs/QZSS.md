@@ -14,25 +14,29 @@ QZSS (Michibiki) ist das regionale japanische System. In GalileoGPS ist es kein 
 |---|---|---|---|
 | Zeit | GPST = UTC + 18 s | QZSST ≡ GPST | `timebase.qzss_to_utc` = `gps_to_utc` |
 | Koordinaten | WGS84 | JGD2011 / ITRF | Meter-Äquivalenz, Ausgabe WGS84 |
-| NMEA-Talker | `GP` | `GQ` | IDs 193–202 |
+| NMEA-Talker | `GP` | `GQ` | IDs 193–199 |
 | Rolle | global | regional (Asien–Ozeanien) | Augmenter, selten standalone |
-| Orbits | MEO | 3 QZO + 1 GEO | hohe Elevation über Japan |
+| Orbits | MEO | QZO + GEO + QGEO | hohe Elevation über Japan |
+
+## QZS-4 / QZS-5
+
+Beide Slots sind QZO (*a* = 42 165 km, *e* = 0,075, *i* = 41°, *ω* = 270°).
+
+- **QZS-4** — aktiv, PRN 195, Zentrum **137,5° E**, Ω = 347°
+- **QZS-5** — verloren (H3 F8, 2025-12-22), Soll-Zentrum **139° E**, Ω = 126°
+
+Vollständige Elemente: [`docs/QZSS_ORBITS.md`](QZSS_ORBITS.md) · Code: `galileogps.qzss_orbits`
 
 ## Dienstregion
 
-Nutzbar, wenn ungefähr:
+Nutzbar, wenn ungefähr Breite −45° … +50° und Länge +95° … +180° (bzw. westlich von −160°).
 
-- Breite −35° … +50°
-- Länge +110° … +180° (bzw. westlich von −160° am Pazifikrand)
-
-`region.qzss_in_service_area(lat, lon)` entscheidet.  
-Tokio, Osaka, Seoul, Taipeh, Manila, Jakarta, Singapore, Darwin, Sydney → ja.  
-Hannover, New York → nein.
+`region.qzss_in_service_area(lat, lon)` entscheidet. Tokio, Seoul, Singapore, Sydney → ja. Hannover → nein.
 
 ## Integrationsregel
 
 1. `GQ` niemals als GPS lesen.
-2. Schon **ein** nutzbarer QZS plus GPS ergibt `gps-qzss` — QZSS hat zu wenige Satelliten für die 4-Sat-Regel.
+2. Schon **ein** nutzbarer QZS plus GPS ergibt `gps-qzss`.
 3. `qzss_sats` immer ausweisen.
-4. `qzss_region` im Fix setzen, damit der Schwarm weiß, ob Asien-Augmentation überhaupt Sinn hat.
+4. `qzss_region` im Fix setzen.
 5. CLAS/MADOCA (L6) bleibt dokumentiert, nicht implementiert.
