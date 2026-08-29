@@ -25,26 +25,42 @@ TALKER_MAP = {
 }
 
 
-def classify_sat(nmea_id: int) -> Constellation:
-    """Map common NMEA satellite IDs to a constellation.
+def classify_sat(nmea_id: int, talker: Optional[str] = None) -> Constellation:
+    """Map NMEA satellite IDs to a constellation.
 
-    Conventional civilian mapping (u-blox / NMEA 4.1 style):
+    Talker wins when the sentence is system-specific:
+    - GB / BD + PRN 1–63 → BeiDou (nicht GPS)
+    - GA + 1–36 → Galileo
+
+    Numeric fallback (u-blox / NMEA 4.10 / 4.11):
     - GPS     1–32
     - SBAS    33–64
-    - GLONASS 65–96   (slot + 64)
-    - Galileo 301–336 or 1–36 on GA talker
-    - BeiDou  201–235 / 401+
+    - GLONASS 65–96
+    - QZSS    193–199
+    - BeiDou  141–180, 201–237, 401+
+    - Galileo 301–336
     """
-    if 1 <= nmea_id <= 32:
+    if talker in ("GB", "BD"):
+        return Constellation.BEIDOU
+    if talker == "GA":
+        return Constellation.GALILEO
+    if talker == "GL":
+        return Constellation.GLONASS
+    if talker == "GP":
         return Constellation.GPS
+    if talker == "GQ":
+        return Constellation.QZSS
+
     if 65 <= nmea_id <= 96:
         return Constellation.GLONASS
     if 301 <= nmea_id <= 336:
         return Constellation.GALILEO
-    if 193 <= nmea_id <= 202:
+    if 193 <= nmea_id <= 199:
         return Constellation.QZSS
-    if 201 <= nmea_id <= 235 or nmea_id >= 401:
+    if 141 <= nmea_id <= 180 or 201 <= nmea_id <= 237 or nmea_id >= 401:
         return Constellation.BEIDOU
+    if 1 <= nmea_id <= 32:
+        return Constellation.GPS
     return Constellation.UNKNOWN
 
 
@@ -54,4 +70,23 @@ def glonass_slot(nmea_id: int) -> Optional[int]:
         slot = nmea_id - 64
         if 1 <= slot <= 24:
             return slot
+    return None
+
+
+def beidou_prn(nmea_id: int, talker: Optional[str] = None) -> Optional[int]:
+    """Normalize a NMEA ID to BeiDou PRN (C01…).
+
+    - GB/BD talker: ID is already the PRN
+    - 201–237 → PRN = ID − 200
+    - 141–180 → PRN = ID − 140
+    - 401+ → PRN = ID − 400
+    """
+    if talker in ("GB", "BD") and 1 <= nmea_id <= 63:
+        return nmea_id
+    if 201 <= nmea_id <= 237:
+        return nmea_id - 200
+    if 141 <= nmea_id <= 180:
+        return nmea_id - 140
+    if nmea_id >= 401:
+        return nmea_id - 400
     return None
