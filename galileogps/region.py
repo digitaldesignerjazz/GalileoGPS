@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-# Official QZSS service is Asia-Oceania. Box is intentionally simple:
-# good enough for oracle gating, not a visibility predictor.
-QZSS_LAT_MIN = -35.0
+# QZSS service area (Asia-Oceania), simple box for oracle gating.
+QZSS_LAT_MIN = -45.0
 QZSS_LAT_MAX = 50.0
-QZSS_LON_WEST = 110.0
-QZSS_LON_EAST_WRAP = -160.0  # 180° → −160° across the date line
+QZSS_LON_WEST = 95.0
+QZSS_LON_EAST_WRAP = -160.0
 
 
 def qzss_in_service_area(lat: Optional[float], lon: Optional[float]) -> bool:
