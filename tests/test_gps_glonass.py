@@ -49,9 +49,11 @@ def test_asia_qzss():
 
 def test_qzss_region_box():
     assert qzss_in_service_area(35.68, 139.65) is True   # Tokyo
-    assert qzss_in_service_area(1.35, 103.8) is False    # Singapore slightly west of 110
+    assert qzss_in_service_area(1.35, 103.8) is True     # Singapore
     assert qzss_in_service_area(-33.87, 151.21) is True  # Sydney
+    assert qzss_in_service_area(37.57, 126.98) is True   # Seoul
     assert qzss_in_service_area(52.38, 9.73) is False    # Hannover
+    assert qzss_in_service_area(28.61, 77.21) is False   # Delhi, west of box
 
 
 def test_time_bridge():
