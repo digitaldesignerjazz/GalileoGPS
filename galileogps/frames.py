@@ -10,7 +10,6 @@ class Ecef:
     z: float
 
 
-# Approximate 7-parameter Helmert PZ-90.11 → WGS84 (meters / mas / ppb).
 PZ90_11_TO_WGS84 = {
     "dx_m": -0.013,
     "dy_m": 0.106,
@@ -39,10 +38,12 @@ def pz90_11_to_wgs84(p: Ecef) -> Ecef:
 
 
 def cgcs2000_to_wgs84(p: Ecef) -> Ecef:
-    """CGCS2000 → WGS84 for meter-level PVT.
+    return Ecef(p.x, p.y, p.z)
 
-    CGCS2000 is aligned to ITRF97 at epoch 2000.0. Residual to WGS84/ITRF
-    is centimetre-class. Survey-grade work must apply the current bulletin;
-    the navigation oracle treats the frames as coincident.
+
+def jgd2011_to_wgs84(p: Ecef) -> Ecef:
+    """JGD2011 (QZSS / Japan) → WGS84 for meter-level PVT.
+
+    JGD2011 is ITRF2008 at epoch 2011.0. Residual to WGS84 is centimetre-class.
     """
     return Ecef(p.x, p.y, p.z)
