@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+.pytest_cache/
+
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# GNSS / receiver dumps
+*.ubx
+*.rnx
+*.21o
+*.nmea
+raw/
+logs/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
