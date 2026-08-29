@@ -1,0 +1,11 @@
+[project]
+name = "galileogps"
+version = "0.2.0"
+description = "Multi-GNSS (Galileo + GPS + GLONASS) layer for the Nexus ecosystem"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Esslinger & Co. / Nexus" }]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
