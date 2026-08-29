@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
-from .constellation import TALKER_MAP, Constellation, beidou_prn, classify_sat, glonass_slot
+from .constellation import (
+    TALKER_MAP,
+    Constellation,
+    beidou_prn,
+    classify_sat,
+    glonass_slot,
+    qzss_prn,
+)
 
 
 def _checksum_ok(line: str) -> bool:
@@ -54,17 +61,10 @@ def _dm_to_deg(dm: str, hemi: str) -> Optional[float]:
     if not dm or not hemi:
         return None
     try:
-        if "." in dm:
-            head, _frac = dm.split(".", 1)
-        else:
-            head = dm
-        if len(head) <= 2:
+        if "." not in dm and len(dm) <= 2:
             deg = float(dm)
         else:
-            if hemi in "NS":
-                n = 2
-            else:
-                n = 3
+            n = 2 if hemi in "NS" else 3
             deg = float(dm[:n]) + float(dm[n:]) / 60.0
         if hemi in "SW":
             deg = -deg
@@ -108,6 +108,12 @@ def _parse_gsv(talker: str, fields: list[str]) -> list[SatelliteView]:
             except ValueError:
                 return None
 
+        prn = None
+        if const == Constellation.BEIDOU:
+            prn = beidou_prn(sat_id, talker)
+        elif const == Constellation.QZSS:
+            prn = qzss_prn(sat_id, talker)
+
         views.append(
             SatelliteView(
                 nmea_id=sat_id,
@@ -116,7 +122,7 @@ def _parse_gsv(talker: str, fields: list[str]) -> list[SatelliteView]:
                 azimuth=_f(2),
                 snr=_f(3),
                 slot=glonass_slot(sat_id) if const == Constellation.GLONASS else None,
-                prn=beidou_prn(sat_id, talker) if const == Constellation.BEIDOU else None,
+                prn=prn,
             )
         )
     return views
