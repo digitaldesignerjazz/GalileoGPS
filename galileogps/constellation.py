@@ -13,7 +13,6 @@ class Constellation(str, Enum):
     UNKNOWN = "unknown"
 
 
-# NMEA talker → constellation
 TALKER_MAP = {
     "GP": Constellation.GPS,
     "GL": Constellation.GLONASS,
@@ -21,22 +20,19 @@ TALKER_MAP = {
     "GB": Constellation.BEIDOU,
     "BD": Constellation.BEIDOU,
     "GQ": Constellation.QZSS,
-    "GN": None,  # combined / multi-GNSS
+    "GN": None,
 }
 
 
 def classify_sat(nmea_id: int, talker: Optional[str] = None) -> Constellation:
     """Map NMEA satellite IDs to a constellation.
 
-    Talker wins when the sentence is system-specific:
-    - GB / BD + PRN 1–63 → BeiDou (nicht GPS)
-    - GA + 1–36 → Galileo
-
+    Talker wins when the sentence is system-specific.
     Numeric fallback (u-blox / NMEA 4.10 / 4.11):
     - GPS     1–32
     - SBAS    33–64
     - GLONASS 65–96
-    - QZSS    193–199
+    - QZSS    193–202
     - BeiDou  141–180, 201–237, 401+
     - Galileo 301–336
     """
@@ -55,7 +51,7 @@ def classify_sat(nmea_id: int, talker: Optional[str] = None) -> Constellation:
         return Constellation.GLONASS
     if 301 <= nmea_id <= 336:
         return Constellation.GALILEO
-    if 193 <= nmea_id <= 199:
+    if 193 <= nmea_id <= 202:
         return Constellation.QZSS
     if 141 <= nmea_id <= 180 or 201 <= nmea_id <= 237 or nmea_id >= 401:
         return Constellation.BEIDOU
@@ -65,7 +61,6 @@ def classify_sat(nmea_id: int, talker: Optional[str] = None) -> Constellation:
 
 
 def glonass_slot(nmea_id: int) -> Optional[int]:
-    """Return GLONASS orbital slot (1–24) from NMEA ID 65–96."""
     if 65 <= nmea_id <= 96:
         slot = nmea_id - 64
         if 1 <= slot <= 24:
@@ -74,13 +69,6 @@ def glonass_slot(nmea_id: int) -> Optional[int]:
 
 
 def beidou_prn(nmea_id: int, talker: Optional[str] = None) -> Optional[int]:
-    """Normalize a NMEA ID to BeiDou PRN (C01…).
-
-    - GB/BD talker: ID is already the PRN
-    - 201–237 → PRN = ID − 200
-    - 141–180 → PRN = ID − 140
-    - 401+ → PRN = ID − 400
-    """
     if talker in ("GB", "BD") and 1 <= nmea_id <= 63:
         return nmea_id
     if 201 <= nmea_id <= 237:
@@ -89,4 +77,16 @@ def beidou_prn(nmea_id: int, talker: Optional[str] = None) -> Optional[int]:
         return nmea_id - 140
     if nmea_id >= 401:
         return nmea_id - 400
+    return None
+
+
+def qzss_prn(nmea_id: int, talker: Optional[str] = None) -> Optional[int]:
+    """Normalize to QZSS PRN (193–202).
+
+    On GQ some receivers emit 1–10 for QZS-1…; those become 192 + n.
+    """
+    if 193 <= nmea_id <= 202:
+        return nmea_id
+    if talker == "GQ" and 1 <= nmea_id <= 10:
+        return 192 + nmea_id
     return None
