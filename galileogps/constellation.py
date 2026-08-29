@@ -32,7 +32,7 @@ def classify_sat(nmea_id: int, talker: Optional[str] = None) -> Constellation:
     - GPS     1–32
     - SBAS    33–64
     - GLONASS 65–96
-    - QZSS    193–202
+    - QZSS    193–199
     - BeiDou  141–180, 201–237, 401+
     - Galileo 301–336
     """
@@ -51,7 +51,7 @@ def classify_sat(nmea_id: int, talker: Optional[str] = None) -> Constellation:
         return Constellation.GLONASS
     if 301 <= nmea_id <= 336:
         return Constellation.GALILEO
-    if 193 <= nmea_id <= 202:
+    if 193 <= nmea_id <= 199:
         return Constellation.QZSS
     if 141 <= nmea_id <= 180 or 201 <= nmea_id <= 237 or nmea_id >= 401:
         return Constellation.BEIDOU
@@ -81,12 +81,12 @@ def beidou_prn(nmea_id: int, talker: Optional[str] = None) -> Optional[int]:
 
 
 def qzss_prn(nmea_id: int, talker: Optional[str] = None) -> Optional[int]:
-    """Normalize to QZSS PRN (193–202).
+    """Normalize to QZSS PRN (193–199).
 
-    On GQ some receivers emit 1–10 for QZS-1…; those become 192 + n.
+    On GQ some receivers emit 1–7 for QZS-1…; those become 192 + n.
     """
-    if 193 <= nmea_id <= 202:
+    if 193 <= nmea_id <= 199:
         return nmea_id
-    if talker == "GQ" and 1 <= nmea_id <= 10:
+    if talker == "GQ" and 1 <= nmea_id <= 7:
         return 192 + nmea_id
     return None
