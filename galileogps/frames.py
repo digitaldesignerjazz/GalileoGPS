@@ -11,8 +11,6 @@ class Ecef:
 
 
 # Approximate 7-parameter Helmert PZ-90.11 → WGS84 (meters / mas / ppb).
-# Values follow commonly published GOST / IERS-aligned sets used in GNSS
-# literature. For survey-grade work replace with the current official bulletin.
 PZ90_11_TO_WGS84 = {
     "dx_m": -0.013,
     "dy_m": 0.106,
@@ -38,3 +36,13 @@ def pz90_11_to_wgs84(p: Ecef) -> Ecef:
     y = pms["dy_m"] + m * (-rz * p.x + p.y + rx * p.z)
     z = pms["dz_m"] + m * (ry * p.x - rx * p.y + p.z)
     return Ecef(x, y, z)
+
+
+def cgcs2000_to_wgs84(p: Ecef) -> Ecef:
+    """CGCS2000 → WGS84 for meter-level PVT.
+
+    CGCS2000 is aligned to ITRF97 at epoch 2000.0. Residual to WGS84/ITRF
+    is centimetre-class. Survey-grade work must apply the current bulletin;
+    the navigation oracle treats the frames as coincident.
+    """
+    return Ecef(p.x, p.y, p.z)
