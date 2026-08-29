@@ -1,9 +1,9 @@
 # GalileoGPS
 
-**Multi-GNSS-Schicht (Galileo + GPS) für das Nexus-Ökosystem**
+**Multi-GNSS-Schicht (Galileo + GPS + GLONASS) für das Nexus-Ökosystem**
 
 GalileoGPS liefert präzise Position, Geschwindigkeit und Zeit (PVT) als öffentliches Orakel für Mesh-Knoten, Agentenschwärme und Hardware-Prototypen.  
-Europäisches Galileo und US-GPS werden gemeinsam ausgewertet — für Robustheit in Stadt, Feld und Mesh-Partition.
+Galileo, GPS und GLONASS werden getrennt geparst und bewusst hybrid verrechnet — für Robustheit in Stadt, Feld und Mesh-Partition.
 
 Teil von **Esslinger & Co. / Nexus**  
 (neben Soilnova, Vista Nova, Lumia, York Autotype, ElysiumOS)
@@ -17,35 +17,63 @@ Teil von **Esslinger & Co. / Nexus**
 | Komponente | Lage |
 |---|---|
 | Repository | Public, live |
-| Konstellationen | Galileo (E1/E5 geplant) + GPS (L1 C/A) |
-| PVT-Kern | Geplant |
+| Konstellationen | Galileo + GPS + **GLONASS** |
+| NMEA-Parser (`GP`/`GL`/`GA`/`GN`) | Aktiv |
+| Zeitbrücke GPST ↔ GLONASST ↔ UTC | Aktiv |
+| PZ-90.11 → WGS84 | Aktiv (Helmert) |
+| Hybrid-Fix (`gps-glo` / `hybrid`) | Aktiv |
 | Mesh-Orakel (`nxmesh`) | Geplant |
 | HAS / High Accuracy Service | Beobachtet |
-| Agenten-Anbindung (Lyra / Xen / Elara / Lumia) | Geplant |
 
 ---
 
-## Auftrag
+## GPS–GLONASS-Integration
 
-1. **Ort** — belastbare Koordinaten für Hannover-Node und mobile Prototypen  
-2. **Zeit** — GNSS-Zeit als gemeinsame Uhr für Mesh-Heartbeats und Blockchain-Timestamps  
-3. **Integrität** — Sichtbarkeit, DOP, Konstellationsvergleich (Galileo vs. GPS vs. hybrid)  
-4. **Orakel** — saubere Schnittstelle für Agenten und Sensor-Stacks (Soilnova, Vista Nova)
+Die Brücke ist die eigentliche Arbeit — nicht das bloße Zusammenzählen von Satelliten.
+
+1. **IDs** — GPS 1–32, GLONASS 65–96 (Slot + 64)
+2. **Zeit** — GPST = UTC + 18 s, GLONASST = UTC + 3 h; Vergleich nur über UTC
+3. **Rahmen** — GLONASS-Ephemeriden in PZ-90.11, Ausgabe immer WGS84
+4. **Fix-Typ** — `gps`, `glonass`, `gps-glo`, `hybrid` (mit Galileo)
+5. **Bias** — Feld `isb_gps_glo_m` ist vorbereitet
+
+Details: [`docs/GPS_GLONASS.md`](docs/GPS_GLONASS.md)
 
 ---
 
-## Architektur (Ziel)
+## Schnelltest
+
+```bash
+python -m pytest tests/test_gps_glonass.py -q
+```
+
+Beispielsatz: [`samples/gps_glonass.nmea`](samples/gps_glonass.nmea) (Hannover-Nähe, GGA + GSV GPS/GLO/GAL).
+
+```python
+from pathlib import Path
+from galileogps.nmea import parse_nmea_stream
+from galileogps.hybrid import build_fix
+
+snap = parse_nmea_stream(Path("samples/gps_glonass.nmea").read_text().splitlines())
+print(build_fix(snap))
+# fix_type: gps-glo | hybrid, glonass_sats > 0
+```
+
+---
+
+## Architektur
 
 ```
-Empfänger / Chip / Raw-Messungen
+Empfänger / NMEA / UBX
         │
    GalileoGPS Core
         │
-   ├─ PVT (Position / Velocity / Time)
-   ├─ Constellation Health
-   ├─ Timing Offset (GST ↔ GPS Time)
-   └─ Mesh Oracle  ───►  nxmesh topic: nexus/gnss/v0
-                                (Lyra / Xen / Elara / Lumia)
+   ├─ constellation.py   IDs, Talker, GLO-Slots
+   ├─ nmea.py            GP / GL / GA / GN
+   ├─ timebase.py        GPST ↔ GLONASST ↔ UTC
+   ├─ frames.py          PZ-90.11 → WGS84
+   ├─ hybrid.py          fix_type + last_fix Schema
+   └─ Mesh Oracle        nexus/gnss/v0   (folgt)
 ```
 
 ---
@@ -59,15 +87,6 @@ Empfänger / Chip / Raw-Messungen
 | [lumia](https://github.com/digitaldesignerjazz/lumia) | Persönliche Agentin |
 | [lumina-network](https://github.com/digitaldesignerjazz/lumina-network) | Mesh-Substrat |
 | [LuminaCyberspace](https://github.com/digitaldesignerjazz/LuminaCyberspace) | Swarm-Netz |
-
----
-
-## Nächste Schritte
-
-- Empfänger-Profil (u-blox / Septentrio / Android raw GNSS)
-- Minimales PVT aus NMEA + optionale Raw-Messungen
-- `status/last_fix.json` analog zum York-Heartbeat
-- Dokumentation in `docs/`
 
 ---
 
